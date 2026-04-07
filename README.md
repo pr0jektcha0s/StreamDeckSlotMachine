@@ -13,7 +13,7 @@ Place the actions on your deck in this arrangement:
 [ Spin ]                     [ Balance ]
 ```
 
-Keys are assigned automatically based on their physical position on the deck — no configuration needed. The 3×3 block of Reel keys can be placed anywhere.
+No configuration required. The plugin reads each key's physical position on the deck and automatically figures out which column and row it occupies. Just drop nine Reel keys anywhere on your deck in a 3×3 block and they will self-organise — top row scrolls above the payline, middle row is the payline, bottom row scrolls below it.
 
 ## Actions
 
