@@ -57,51 +57,42 @@ Symbols are weighted — 7 is the rarest, Cherry is the most common.
 - [Git](https://git-scm.com)
 - Elgato Stream Deck software
 
-### macOS
+### Build the installable plugin file
 
 ```bash
 git clone https://github.com/pr0jektcha0s/StreamDeckSlotMachine.git
 cd StreamDeckSlotMachine
 npm install
 npm run generate-assets
-npm run build
+npm run package
+```
+
+This produces **`com.stahlee.slotmachine.streamDeckPlugin`** in the project root. Double-click it and Stream Deck will install the plugin automatically on both macOS and Windows.
+
+### Manual installation (alternative)
+
+If you prefer to copy the files yourself instead of double-clicking:
+
+**macOS:**
+```bash
 cp -r com.stahlee.slotmachine.sdPlugin \
   ~/Library/Application\ Support/com.elgato.StreamDeck/Plugins/
 ```
 
-Restart the Stream Deck application. The **Slot Machine** category will appear in the action list.
+**Windows** — copy the `com.stahlee.slotmachine.sdPlugin` folder to:
+```
+C:\Users\<your username>\AppData\Roaming\Elgato\StreamDeck\Plugins\
+```
 
-### Windows
-
-1. Clone and build the plugin:
-
-   ```powershell
-   git clone https://github.com/pr0jektcha0s/StreamDeckSlotMachine.git
-   cd StreamDeckSlotMachine
-   npm install
-   npm run generate-assets
-   npm run build
-   ```
-
-2. Copy the plugin folder to the Stream Deck plugins directory:
-
-   ```powershell
-   xcopy /E /I com.stahlee.slotmachine.sdPlugin "%APPDATA%\Elgato\StreamDeck\Plugins\com.stahlee.slotmachine.sdPlugin"
-   ```
-
-   Or copy it manually in Explorer — the destination is:
-   ```
-   C:\Users\<your username>\AppData\Roaming\Elgato\StreamDeck\Plugins\com.stahlee.slotmachine.sdPlugin\
-   ```
-
-3. Restart the Stream Deck application. The **Slot Machine** category will appear in the action list.
+Restart the Stream Deck application after either method. The **Slot Machine** category will appear in the action list.
 
 ## Development
 
 ```bash
-npm run dev       # generate assets + watch mode (rebuilds on save)
-npm run build     # single production build
+npm run dev              # generate assets + watch mode (rebuilds on save)
+npm run build            # single production build
 npm run generate-assets  # regenerate all PNGs (symbols, UI, icons)
+npm run package          # build + create .streamDeckPlugin installer
 ```
 
 Built with the [Elgato Stream Deck SDK](https://github.com/elgatosf/streamdeck) (TypeScript), Rollup, and `@napi-rs/canvas` for asset generation. Reel animations are rendered as SVG data URLs at runtime — no native dependencies required in the plugin bundle.

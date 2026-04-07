@@ -9,7 +9,8 @@
     "watch": "rollup -c --bundleConfigAsCjs -w",
     "generate-assets": "node scripts/generate-assets.mjs",
     "setup": "npm run generate-assets",
-    "dev": "npm run generate-assets && npm run watch"
+    "dev": "npm run generate-assets && npm run watch",
+    "package": "npm run build && node scripts/package-plugin.mjs"
   },
   "dependencies": {
     "@elgato/streamdeck": "^1.0.0"
@@ -20,6 +21,7 @@
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-typescript": "^11.1.6",
     "@types/node": "^25.5.2",
+    "archiver": "^7.0.1",
     "rollup": "^4.9.6",
     "tslib": "^2.6.2",
     "typescript": "^5.3.3"
