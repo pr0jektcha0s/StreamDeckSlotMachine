@@ -12,7 +12,11 @@
  * Requires: @napi-rs/canvas (devDependency)
  */
 
-import { createCanvas } from "@napi-rs/canvas";
+import { createCanvas, GlobalFonts } from "@napi-rs/canvas";
+
+// Load system fonts so emoji renders correctly on both macOS and Windows
+// (picks up Apple Color Emoji on macOS, Segoe UI Emoji on Windows).
+GlobalFonts.loadSystemFonts();
 import { writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";

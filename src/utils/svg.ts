@@ -42,7 +42,7 @@ function symbolGroup(sym: SlotSymbol, offsetY: number): string {
       `<text x="${MID}" y="${Math.round(S * 0.62)}" ` +
       `text-anchor="middle" ` +
       `font-size="${Math.round(S * 0.50)}" ` +
-      `font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,serif">` +
+      `font-family="Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,serif">` +
       `${sym.label}</text>`;
   } else {
     const fs     = sym.label === "BAR" ? Math.round(S * 0.33) : Math.round(S * 0.58);
