@@ -1,0 +1,27 @@
+{
+  "name": "com.stahlee.slotmachine",
+  "version": "1.0.0",
+  "description": "Slot machine simulator plugin for Stream Deck",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c --bundleConfigAsCjs",
+    "watch": "rollup -c --bundleConfigAsCjs -w",
+    "generate-assets": "node scripts/generate-assets.mjs",
+    "setup": "npm run generate-assets",
+    "dev": "npm run generate-assets && npm run watch"
+  },
+  "dependencies": {
+    "@elgato/streamdeck": "^1.0.0"
+  },
+  "devDependencies": {
+    "@napi-rs/canvas": "^0.1.56",
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@types/node": "^25.5.2",
+    "rollup": "^4.9.6",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3"
+  }
+}

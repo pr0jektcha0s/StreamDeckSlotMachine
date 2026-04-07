@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Reel Settings</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+      color: #d8d8d8;
+      background: #2d2d2d;
+      padding: 12px;
+    }
+    label { display: block; margin-bottom: 6px; color: #9a9a9a; }
+    select {
+      width: 100%;
+      padding: 6px 8px;
+      background: #3d3d3d;
+      border: 1px solid #555;
+      border-radius: 4px;
+      color: #d8d8d8;
+      font-size: 13px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      margin-top: 10px;
+    }
+    .cell {
+      background: #3d3d3d;
+      border: 1px solid #555;
+      border-radius: 4px;
+      padding: 4px 0;
+      text-align: center;
+      font-size: 11px;
+      color: #9a9a9a;
+    }
+    .cell.payline { border-color: #fbbf24; color: #fbbf24; }
+    .hint {
+      margin-top: 10px;
+      font-size: 11px;
+      color: #666;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <label for="reelIndex">Grid Position</label>
+  <select id="reelIndex">
+    <option value="0">Top-Left     (Col 1, Row 1)</option>
+    <option value="1">Top-Center   (Col 2, Row 1)</option>
+    <option value="2">Top-Right    (Col 3, Row 1)</option>
+    <option value="3">Mid-Left   ★ (Col 1, Row 2 — payline)</option>
+    <option value="4">Mid-Center ★ (Col 2, Row 2 — payline)</option>
+    <option value="5">Mid-Right  ★ (Col 3, Row 2 — payline)</option>
+    <option value="6">Bot-Left     (Col 1, Row 3)</option>
+    <option value="7">Bot-Center   (Col 2, Row 3)</option>
+    <option value="8">Bot-Right    (Col 3, Row 3)</option>
+  </select>
+
+  <div class="grid">
+    <div class="cell">0</div><div class="cell">1</div><div class="cell">2</div>
+    <div class="cell payline">3 ★</div><div class="cell payline">4 ★</div><div class="cell payline">5 ★</div>
+    <div class="cell">6</div><div class="cell">7</div><div class="cell">8</div>
+  </div>
+
+  <p class="hint">
+    Place nine Reel keys in a 3×3 grid. The middle row (★) is the payline.
+    Keys are auto-assigned 0→8 in the order they appear.
+  </p>
+
+  <script>
+    const select = document.getElementById("reelIndex");
+    let ws, uuid;
+
+    window.connectElgatoStreamDeckSocket = function (
+      port, actionUUID, registerEvent, _info, actionInfo
+    ) {
+      uuid = actionUUID;
+      ws = new WebSocket(`ws://127.0.0.1:${port}`);
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ event: registerEvent, uuid }));
+        try {
+          const data = JSON.parse(actionInfo);
+          const saved = data?.payload?.settings?.reelIndex;
+          if (saved !== undefined) select.value = String(saved);
+        } catch (_) {}
+      };
+
+      select.addEventListener("change", () => {
+        ws.send(JSON.stringify({
+          event: "setSettings",
+          context: uuid,
+          payload: { reelIndex: parseInt(select.value, 10) },
+        }));
+      });
+    };
+  </script>
+</body>
+</html>

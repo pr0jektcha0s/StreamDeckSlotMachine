@@ -1,0 +1,56 @@
+{
+  "Name": "Slot Machine",
+  "Version": "1.0.0",
+  "Author": "stahlee",
+  "Description": "A slot machine simulator with animated reels, payouts, and balance tracking.",
+  "Category": "Games",
+  "CategoryIcon": "imgs/plugin/category",
+  "SDKVersion": 2,
+  "Software": {
+    "MinimumVersion": "6.4"
+  },
+  "OS": [
+    { "Platform": "mac",     "MinimumVersion": "10.15" },
+    { "Platform": "windows", "MinimumVersion": "10" }
+  ],
+  "Icon": "imgs/plugin/marketplace",
+  "UUID": "com.stahlee.slotmachine",
+  "CodePath": "bin/plugin.js",
+  "Nodejs": {
+    "Version": "20",
+    "Debug": "enabled"
+  },
+  "Actions": [
+    {
+      "Name": "Reel",
+      "UUID": "com.stahlee.slotmachine.reel",
+      "Icon": "imgs/actions/reel/action",
+      "Tooltip": "A slot machine reel. Place three of these in a row and press Spin!",
+      "PropertyInspectorPath": "ui/reel.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        { "Image": "imgs/actions/reel/key" }
+      ]
+    },
+    {
+      "Name": "Spin",
+      "UUID": "com.stahlee.slotmachine.spin",
+      "Icon": "imgs/actions/spin/action",
+      "Tooltip": "Press to spin the reels. Shows win/loss result after each spin.",
+      "Controllers": ["Keypad"],
+      "States": [
+        { "Image": "imgs/actions/spin/key" }
+      ]
+    },
+    {
+      "Name": "Balance",
+      "UUID": "com.stahlee.slotmachine.balance",
+      "Icon": "imgs/actions/balance/action",
+      "Tooltip": "Displays your coin balance and current bet. Press to cycle the bet amount.",
+      "Controllers": ["Keypad"],
+      "States": [
+        { "Image": "imgs/actions/balance/key" }
+      ]
+    }
+  ]
+}

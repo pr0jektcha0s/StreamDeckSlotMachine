@@ -1,0 +1,4 @@
+node_modules/
+com.stahlee.slotmachine.sdPlugin/bin/
+*.js.map
+.DS_Store
