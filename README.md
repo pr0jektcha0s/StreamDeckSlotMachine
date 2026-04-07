@@ -51,9 +51,13 @@ Symbols are weighted — 7 is the rarest, Cherry is the most common.
 
 ## Installation
 
-### From source
+### Prerequisites
 
-**Prerequisites:** Node.js 20+, npm
+- [Node.js 20+](https://nodejs.org)
+- [Git](https://git-scm.com)
+- Elgato Stream Deck software
+
+### macOS
 
 ```bash
 git clone https://github.com/pr0jektcha0s/StreamDeckSlotMachine.git
@@ -61,22 +65,36 @@ cd StreamDeckSlotMachine
 npm install
 npm run generate-assets
 npm run build
-```
-
-Then copy the plugin folder to the Stream Deck plugins directory:
-
-**macOS:**
-```bash
 cp -r com.stahlee.slotmachine.sdPlugin \
   ~/Library/Application\ Support/com.elgato.StreamDeck/Plugins/
 ```
 
-**Windows:**
-```
-%APPDATA%\Elgato\StreamDeck\Plugins\
-```
-
 Restart the Stream Deck application. The **Slot Machine** category will appear in the action list.
+
+### Windows
+
+1. Clone and build the plugin:
+
+   ```powershell
+   git clone https://github.com/pr0jektcha0s/StreamDeckSlotMachine.git
+   cd StreamDeckSlotMachine
+   npm install
+   npm run generate-assets
+   npm run build
+   ```
+
+2. Copy the plugin folder to the Stream Deck plugins directory:
+
+   ```powershell
+   xcopy /E /I com.stahlee.slotmachine.sdPlugin "%APPDATA%\Elgato\StreamDeck\Plugins\com.stahlee.slotmachine.sdPlugin"
+   ```
+
+   Or copy it manually in Explorer — the destination is:
+   ```
+   C:\Users\<your username>\AppData\Roaming\Elgato\StreamDeck\Plugins\com.stahlee.slotmachine.sdPlugin\
+   ```
+
+3. Restart the Stream Deck application. The **Slot Machine** category will appear in the action list.
 
 ## Development
 
