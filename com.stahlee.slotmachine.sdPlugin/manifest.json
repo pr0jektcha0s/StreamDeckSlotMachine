@@ -1,6 +1,6 @@
 {
   "Name": "Slot Machine",
-  "Version": "1.0.0",
+  "Version": "1.1.0",
   "Author": "stahlee",
   "Description": "A slot machine simulator with animated reels, payouts, and balance tracking.",
   "Category": "Games",
@@ -25,7 +25,7 @@
       "Name": "Reel",
       "UUID": "com.stahlee.slotmachine.reel",
       "Icon": "imgs/actions/reel/action",
-      "Tooltip": "A slot machine reel. Place three of these in a row and press Spin!",
+      "Tooltip": "A slot machine reel. Place in any rectangular block up to 5×4 and press Spin!",
       "PropertyInspectorPath": "ui/reel.html",
       "Controllers": ["Keypad"],
       "States": [
