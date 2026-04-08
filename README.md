@@ -1,6 +1,6 @@
 # Stream Deck Slot Machine
 
-A slot machine simulator plugin for the Elgato Stream Deck. Animated reels spin across a configurable grid of keys — from a compact 3×3 up to a wide 5×4 — with scrolling symbol animations, probability-corrected payouts, and a balance/bet system.
+A slot machine simulator plugin for the Elgato Stream Deck. Animated reels spin across a configurable grid of keys — place anywhere from a handful of reels up to a full 5×4 grid — with scrolling symbol animations, probability-corrected payouts, and a balance/bet system.
 
 ## Layout
 
@@ -14,15 +14,15 @@ Place the actions on your deck in any rectangular block:
 [ Spin ]                             [ Balance ]
 ```
 
-No configuration required. The plugin reads each key's physical position on the deck and automatically figures out which column and row it occupies. Place Reel keys in any rectangular block from **3×3 up to 5×4** and they will self-organise automatically — the centre row is always the payline, columns map left-to-right.
+No configuration required. The plugin reads each key's physical position on the deck and automatically figures out which column and row it occupies. Place Reel keys in any rectangular block up to **5 columns × 4 rows** and they will self-organise automatically — the centre row is always the payline, columns map left-to-right.
 
-**Supported grid sizes:** 3×3, 4×3, 5×3, 3×4, 4×4, 5×4, and any smaller combination. Just drop more Reel keys adjacent to the existing block and the plugin adapts instantly — no restart needed.
+**Supported grid sizes:** anything from 3 columns up to 5, and 1 row up to 4. Just drop more Reel keys adjacent to the existing block and the plugin adapts instantly — no restart needed.
 
 ## Actions
 
 | Action | Description |
 |---|---|
-| **Reel** | One cell of the reel grid. Place in any rectangular block (3×3 up to 5×4). |
+| **Reel** | One cell of the reel grid. Place in any rectangular block up to 5×4. |
 | **Spin** | Press to spin. Shows win/loss result for 3 seconds after each spin. |
 | **Balance** | Displays your current coin balance and active bet. Press to cycle the bet amount. |
 
