@@ -7,16 +7,13 @@ import {
   type PayoutResult,
 } from "./symbols.js";
 
-export type ColumnIndex = 0 | 1 | 2;
-export type RowIndex = 0 | 1 | 2;
-
 export interface ReelStrip {
   symbols: SlotSymbol[];
-  position: number; // symbols[position] is the MIDDLE (payline) row
+  position: number; // symbols[position] is the payline row
 }
 
 export interface SpinCompleteEvent {
-  payline: [SlotSymbol, SlotSymbol, SlotSymbol];
+  payline: SlotSymbol[];
   result: PayoutResult;
   newBalance: number;
 }
@@ -29,12 +26,16 @@ export const BET_STEPS = [1, 2, 5, 10] as const;
 const SUBFRAMES = 2;
 /** Milliseconds per render frame → 20 fps, 100 ms per symbol change. */
 const SUBFRAME_MS = 50;
+/** Base stop delay for the first column (ms). */
+const STOP_BASE_MS = 1400;
+/** Additional stop delay per column (ms). */
+const STOP_STEP_MS = 800;
 
 interface ColAnim {
   /** Symbol visible in each row at the START of the current transition. */
-  prev: [SlotSymbol, SlotSymbol, SlotSymbol];
+  prev: SlotSymbol[];
   /** Symbol arriving in each row during the current transition. */
-  curr: [SlotSymbol, SlotSymbol, SlotSymbol];
+  curr: SlotSymbol[];
   /** Current sub-frame index within this transition (0 … SUBFRAMES-1). */
   subframe: number;
 }
@@ -46,55 +47,86 @@ class SlotMachine extends EventEmitter {
   bet: (typeof BET_STEPS)[number] = 1;
   spinning = false;
 
-  strips: [ReelStrip, ReelStrip, ReelStrip] = [
-    { symbols: generateReelStrip(21), position: 0 },
-    { symbols: generateReelStrip(21), position: 0 },
-    { symbols: generateReelStrip(21), position: 0 },
+  /** Current grid dimensions (auto-derived from placed reel keys). */
+  numCols = 3;
+  numRows = 3;
+
+  strips: ReelStrip[] = Array.from({ length: 3 }, () => ({
+    symbols: generateReelStrip(21),
+    position: 0,
+  }));
+
+  colAnims: ColAnim[] = [];
+
+  private frameIntervals: (ReturnType<typeof setInterval> | null)[] = [
+    null,
+    null,
+    null,
   ];
-
-  /** Per-column animation state, used to drive the scroll SVG frames. */
-  colAnims: [ColAnim, ColAnim, ColAnim];
-
-  private frameIntervals: [
-    ReturnType<typeof setInterval> | null,
-    ReturnType<typeof setInterval> | null,
-    ReturnType<typeof setInterval> | null,
-  ] = [null, null, null];
 
   constructor() {
     super();
-    // Initialise animation state so prev === curr (no transition at rest).
-    this.colAnims = ([0, 1, 2] as const).map((col) => {
-      const syms = ([0, 1, 2] as const).map(
-        (row) => this.getSymbolAt(col, row)
-      ) as [SlotSymbol, SlotSymbol, SlotSymbol];
-      return {
-        prev: [...syms] as [SlotSymbol, SlotSymbol, SlotSymbol],
-        curr: syms,
-        subframe: 0,
-      };
-    }) as [ColAnim, ColAnim, ColAnim];
+    this.colAnims = this.buildColAnims();
+  }
+
+  // ── Grid resize ─────────────────────────────────────────────────────────────
+
+  /**
+   * Called by ReelAction whenever the set of placed reel keys changes.
+   * Grows or shrinks strips/colAnims to match the new grid dimensions.
+   * No-ops if dimensions are unchanged or a spin is in progress.
+   */
+  resize(cols: number, rows: number): void {
+    if (cols === this.numCols && rows === this.numRows) return;
+    if (this.spinning) return;
+
+    this.numCols = cols;
+    this.numRows = rows;
+
+    // Grow strip array if needed (preserve existing strips).
+    while (this.strips.length < cols) {
+      this.strips.push({ symbols: generateReelStrip(21), position: 0 });
+    }
+    this.strips.length = cols;
+
+    // Rebuild animation state for all columns.
+    this.colAnims = this.buildColAnims();
+
+    // Resize interval array.
+    for (let i = cols; i < this.frameIntervals.length; i++) {
+      const iv = this.frameIntervals[i];
+      if (iv != null) clearInterval(iv);
+    }
+    this.frameIntervals.length = cols;
+    for (let i = 0; i < cols; i++) {
+      if (this.frameIntervals[i] === undefined) this.frameIntervals[i] = null;
+    }
+
+    this.emit("resize", cols, rows);
   }
 
   // ── Public helpers ──────────────────────────────────────────────────────────
 
+  /** Index of the row that is the payline (centre of the visible grid). */
+  get paylineRow(): number {
+    return Math.floor(this.numRows / 2);
+  }
+
   /**
    * Symbol visible at a given column / row.
-   * row 0 = one above payline, row 1 = payline, row 2 = one below.
+   * Rows are 0-indexed; paylineRow is the payline centre.
    */
-  getSymbolAt(col: ColumnIndex, row: RowIndex): SlotSymbol {
+  getSymbolAt(col: number, row: number): SlotSymbol {
     const strip = this.strips[col];
     const len = strip.symbols.length;
-    const offset = row - 1; // -1, 0, +1 relative to centre
+    const offset = row - this.paylineRow;
     return strip.symbols[((strip.position + offset) % len + len) % len];
   }
 
-  getPayline(): [SlotSymbol, SlotSymbol, SlotSymbol] {
-    return [
-      this.getSymbolAt(0, 1),
-      this.getSymbolAt(1, 1),
-      this.getSymbolAt(2, 1),
-    ];
+  getPayline(): SlotSymbol[] {
+    return Array.from({ length: this.numCols }, (_, col) =>
+      this.getSymbolAt(col, this.paylineRow)
+    );
   }
 
   // ── Public API ──────────────────────────────────────────────────────────────
@@ -111,11 +143,10 @@ class SlotMachine extends EventEmitter {
     this.emit("balance-change", this.balance);
     this.emit("spin-start");
 
-    for (let col = 0; col < 3; col++) {
+    for (let col = 0; col < this.numCols; col++) {
       const anim  = this.colAnims[col];
       const strip = this.strips[col];
 
-      // Reset sub-frame counter for a clean start.
       anim.subframe = 0;
 
       this.frameIntervals[col] = setInterval(() => {
@@ -125,38 +156,37 @@ class SlotMachine extends EventEmitter {
           // Advance the strip one position (decrement = top-to-bottom scroll).
           anim.subframe = 0;
           strip.position =
-            ((strip.position - 1) % strip.symbols.length + strip.symbols.length) %
+            ((strip.position - 1) % strip.symbols.length +
+              strip.symbols.length) %
             strip.symbols.length;
 
-          // Roll prev ← curr, then update curr from the new strip position.
-          anim.prev = [...anim.curr] as [SlotSymbol, SlotSymbol, SlotSymbol];
-          for (let row = 0; row < 3; row++) {
-            anim.curr[row as RowIndex] = this.getSymbolAt(
-              col as ColumnIndex,
-              row as RowIndex
-            );
+          anim.prev = [...anim.curr];
+          for (let row = 0; row < this.numRows; row++) {
+            anim.curr[row] = this.getSymbolAt(col, row);
           }
         }
 
         const progress = anim.subframe / SUBFRAMES;
 
-        for (let row = 0; row < 3; row++) {
+        for (let row = 0; row < this.numRows; row++) {
           this.emit(
             "key-update",
-            col as ColumnIndex,
-            row as RowIndex,
-            anim.curr[row as RowIndex],
-            anim.prev[row as RowIndex],
+            col,
+            row,
+            anim.curr[row],
+            anim.prev[row],
             progress
           );
         }
       }, SUBFRAME_MS);
     }
 
-    // Stagger stops: col 0 → 1.4 s, col 1 → 2.2 s, col 2 → 3.0 s
-    ([1400, 2200, 3000] as const).forEach((delay, col) => {
-      setTimeout(() => this.stopColumn(col as ColumnIndex), delay);
-    });
+    // Stagger stops: col 0 at STOP_BASE_MS, each subsequent col STOP_STEP_MS later.
+    for (let col = 0; col < this.numCols; col++) {
+      const delay = STOP_BASE_MS + col * STOP_STEP_MS;
+      const c = col;
+      setTimeout(() => this.stopColumn(c), delay);
+    }
   }
 
   cycleBet(): void {
@@ -168,8 +198,18 @@ class SlotMachine extends EventEmitter {
 
   // ── Private helpers ─────────────────────────────────────────────────────────
 
-  private stopColumn(col: ColumnIndex): void {
-    clearInterval(this.frameIntervals[col]!);
+  private buildColAnims(): ColAnim[] {
+    return Array.from({ length: this.numCols }, (_, col) => {
+      const syms = Array.from({ length: this.numRows }, (_, row) =>
+        this.getSymbolAt(col, row)
+      );
+      return { prev: [...syms], curr: syms, subframe: 0 };
+    });
+  }
+
+  private stopColumn(col: number): void {
+    const iv = this.frameIntervals[col];
+    if (iv != null) clearInterval(iv);
     this.frameIntervals[col] = null;
 
     const anim  = this.colAnims[col];
@@ -177,31 +217,24 @@ class SlotMachine extends EventEmitter {
     const len   = strip.symbols.length;
     const pos   = strip.position;
 
-    // Inject fresh random symbols at the three visible positions.
-    strip.symbols[((pos - 1) % len + len) % len] = randomSymbol(); // top
-    strip.symbols[pos % len]                      = randomSymbol(); // payline
-    strip.symbols[(pos + 1) % len]                = randomSymbol(); // bottom
+    // Inject fresh random symbols at all visible positions.
+    for (let row = 0; row < this.numRows; row++) {
+      const offset = row - this.paylineRow;
+      strip.symbols[((pos + offset) % len + len) % len] = randomSymbol();
+    }
 
-    // Snap animation state: prev = current display, curr = final symbols.
-    anim.prev = [...anim.curr] as [SlotSymbol, SlotSymbol, SlotSymbol];
-    for (let row = 0; row < 3; row++) {
-      anim.curr[row as RowIndex] = this.getSymbolAt(col, row as RowIndex);
+    anim.prev = [...anim.curr];
+    for (let row = 0; row < this.numRows; row++) {
+      anim.curr[row] = this.getSymbolAt(col, row);
     }
 
     // Emit at progress=1 so each key immediately snaps to its final symbol.
-    for (let row = 0; row < 3; row++) {
-      this.emit(
-        "key-update",
-        col,
-        row as RowIndex,
-        anim.curr[row as RowIndex],
-        anim.prev[row as RowIndex],
-        1.0
-      );
+    for (let row = 0; row < this.numRows; row++) {
+      this.emit("key-update", col, row, anim.curr[row], anim.prev[row], 1.0);
     }
 
     this.emit("column-stop", col);
-    if (col === 2) this.finalizeSpin();
+    if (col === this.numCols - 1) this.finalizeSpin();
   }
 
   private finalizeSpin(): void {
@@ -210,7 +243,11 @@ class SlotMachine extends EventEmitter {
     this.balance += result.winnings;
     this.spinning = false;
 
-    this.emit("spin-complete", { payline, result, newBalance: this.balance } as SpinCompleteEvent);
+    this.emit("spin-complete", {
+      payline,
+      result,
+      newBalance: this.balance,
+    } as SpinCompleteEvent);
     this.emit("balance-change", this.balance);
   }
 }

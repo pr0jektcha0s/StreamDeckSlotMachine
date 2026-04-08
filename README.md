@@ -1,25 +1,28 @@
 # Stream Deck Slot Machine
 
-A slot machine simulator plugin for the Elgato Stream Deck. Three animated reels spin across a 3×3 grid of keys with scrolling symbol animations, weighted payouts, and a balance/bet system.
+A slot machine simulator plugin for the Elgato Stream Deck. Animated reels spin across a configurable grid of keys — from a compact 3×3 up to a wide 5×4 — with scrolling symbol animations, probability-corrected payouts, and a balance/bet system.
 
 ## Layout
 
-Place the actions on your deck in this arrangement:
+Place the actions on your deck in any rectangular block:
 
 ```
-[ Reel ] [ Reel ] [ Reel ]   ← symbols above the payline
-[ Reel ] [ Reel ] [ Reel ]   ← PAYLINE ★  (wins evaluated here)
-[ Reel ] [ Reel ] [ Reel ]   ← symbols below the payline
-[ Spin ]                     [ Balance ]
+[ Reel ] [ Reel ] [ Reel ] [ Reel ] [ Reel ]   ← above payline
+[ Reel ] [ Reel ] [ Reel ] [ Reel ] [ Reel ]   ← PAYLINE ★  (wins evaluated here)
+[ Reel ] [ Reel ] [ Reel ] [ Reel ] [ Reel ]   ← below payline
+[ Reel ] [ Reel ] [ Reel ] [ Reel ] [ Reel ]   ← below payline (4-row grid)
+[ Spin ]                             [ Balance ]
 ```
 
-No configuration required. The plugin reads each key's physical position on the deck and automatically figures out which column and row it occupies. Just drop nine Reel keys anywhere on your deck in a 3×3 block and they will self-organise — top row scrolls above the payline, middle row is the payline, bottom row scrolls below it.
+No configuration required. The plugin reads each key's physical position on the deck and automatically figures out which column and row it occupies. Place Reel keys in any rectangular block from **3×3 up to 5×4** and they will self-organise automatically — the centre row is always the payline, columns map left-to-right.
+
+**Supported grid sizes:** 3×3, 4×3, 5×3, 3×4, 4×4, 5×4, and any smaller combination. Just drop more Reel keys adjacent to the existing block and the plugin adapts instantly — no restart needed.
 
 ## Actions
 
 | Action | Description |
 |---|---|
-| **Reel** | One cell of the 3×3 reel grid. Place nine in a block. |
+| **Reel** | One cell of the reel grid. Place in any rectangular block (3×3 up to 5×4). |
 | **Spin** | Press to spin. Shows win/loss result for 3 seconds after each spin. |
 | **Balance** | Displays your current coin balance and active bet. Press to cycle the bet amount. |
 
@@ -27,25 +30,41 @@ No configuration required. The plugin reads each key's physical position on the 
 
 - Start with **100 coins**
 - Press **Spin** to deduct your bet and start the reels
-- Reels scroll top-to-bottom and stop one column at a time (left → middle → right)
-- Wins are paid based on the **middle row** (payline)
+- Reels scroll top-to-bottom and stop one column at a time (left → right)
+- Wins are paid based on the **centre row** (payline)
 - Press **Balance** to cycle your bet: 1 → 2 → 5 → 10 → 1
 - Balance auto-resets to 100 if you go broke
 
 ## Paytable
 
-| Match | Payout |
-|---|---|
-| 7 7 7 | 100× bet |
-| BAR BAR BAR | 40× bet |
-| 🔔 🔔 🔔 | 20× bet |
-| 🍊 🍊 🍊 | 10× bet |
-| 🍋 🍋 🍋 | 5× bet |
-| 🍒 🍒 🍒 | 3× bet |
-| 7 7 (any third) | 10× bet |
-| BAR BAR (any third) | 5× bet |
-| 🔔 🔔 (any third) | 3× bet |
-| Any 🍒 | 0.5× bet |
+Payouts are **probability-corrected** — every multiplier is derived from the true statistical odds of hitting that combination on your grid size. Wider grids make full matches rarer, so the payouts increase proportionally. The same formula runs at runtime regardless of grid size, so every configuration is balanced.
+
+### Consecutive match from left — full grid match
+
+| Symbol | 3-col | 4-col | 5-col |
+|---|---|---|---|
+| 7 | 100× | 458× | 2100× |
+| BAR | 40× | 130× | 420× |
+| 🔔 Bell | 20× | 53× | 140× |
+| 🍊 Orange | 10× | 23× | 53× |
+| 🍋 Lemon | 5× | 10× | 21× |
+| 🍒 Cherry | 3× | 6× | 11× |
+
+**Partial runs** also pay out. For example, 3 sevens from the left on a 5-column grid pays ~102× — slightly more than the 3-col baseline because the 4th reel must actively show a different symbol. 4 sevens from the left on a 5-column grid pays ~470×.
+
+### Scatter pays (any position on payline)
+
+Scatter payouts also scale with grid width — more columns means these combinations are easier to hit by chance, so the multiplier adjusts accordingly.
+
+| Match | 3-col | 4-col | 5-col |
+|---|---|---|---|
+| 2+ sevens anywhere | 10× | 7× | 6× |
+| 3+ sevens anywhere | 78× | 40× | 26× |
+| 2+ BAR | 5× | 4× | 3× |
+| 3+ BAR | 27× | 14× | 9× |
+| 2+ 🔔 | 3× | 2× | 2× |
+| 3+ 🔔 | 13× | 7× | 5× |
+| Any 🍒 | 0.5× bet (all grid sizes) | | |
 
 Symbols are weighted — 7 is the rarest, Cherry is the most common.
 

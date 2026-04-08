@@ -1,14 +1,18 @@
 /**
- * ReelAction – one of nine reel display keys arranged in a 3×3 grid.
+ * ReelAction – one cell of the reel grid.
  *
  * Position is derived from each key's physical deck coordinates — no settings,
  * no counters, no race conditions. The top-left key in the placed group becomes
  * game position (col 0, row 0); the rest are computed relative to it.
  *
- *   deck: any 3×3 block the user places    →  game grid:
- *   (c,r)  (c+1,r)  (c+2,r)                  (0,0) (1,0) (2,0)  ← above payline
- *   (c,r+1)(c+1,r+1)(c+2,r+1)                (0,1) (1,1) (2,1)  ← PAYLINE ★
- *   (c,r+2)(c+1,r+2)(c+2,r+2)                (0,2) (1,2) (2,2)  ← below payline
+ * Grid size is auto-detected: place any N×M block of Reel keys (up to 5×4)
+ * and the plugin will self-organise columns and rows accordingly. The centre
+ * row (Math.floor(rows / 2)) is always the payline.
+ *
+ *   Deck: any N×M block the user places   →  game grid example (3×3):
+ *   (c,r)   (c+1,r)   … (c+N-1,r)           (0,0) (1,0) (2,0)  ← above payline
+ *   (c,r+1) (c+1,r+1) … (c+N-1,r+1)         (0,1) (1,1) (2,1)  ← PAYLINE ★
+ *   (c,r+2) (c+1,r+2) … (c+N-1,r+2)         (0,2) (1,2) (2,2)  ← below payline
  */
 
 import {
@@ -20,11 +24,7 @@ import {
 } from "@elgato/streamdeck";
 import type { JsonObject } from "@elgato/streamdeck";
 import type { KeyAction } from "@elgato/streamdeck";
-import {
-  slotMachine,
-  type ColumnIndex,
-  type RowIndex,
-} from "../game/slotMachine.js";
+import { slotMachine } from "../game/slotMachine.js";
 import { type SlotSymbol } from "../game/symbols.js";
 import { makeScrollSvg, makeStaticSvg } from "../utils/svg.js";
 
@@ -39,7 +39,7 @@ export class ReelAction extends SingletonAction<JsonObject> {
   /** action id → deck coords (needed in onWillDisappear which only has ActionContext) */
   private readonly idToCoords = new Map<string, DeckCoords>();
 
-  /** Top-left corner of the placed 3×3 block. */
+  /** Top-left corner of the placed block (deck coordinates). */
   private minCol = 0;
   private minRow = 0;
 
@@ -49,8 +49,8 @@ export class ReelAction extends SingletonAction<JsonObject> {
     slotMachine.on(
       "key-update",
       (
-        gameCol: ColumnIndex,
-        gameRow: RowIndex,
+        gameCol: number,
+        gameRow: number,
         curr: SlotSymbol,
         prev: SlotSymbol,
         progress: number
@@ -66,6 +66,18 @@ export class ReelAction extends SingletonAction<JsonObject> {
         act.setImage(svg).catch(console.error);
       }
     );
+
+    // Re-render all registered keys when the grid is resized.
+    slotMachine.on("resize", () => {
+      for (const [key, act] of this.coordToAction) {
+        const [colStr, rowStr] = key.split(",");
+        const gameCol = parseInt(colStr) - this.minCol;
+        const gameRow = parseInt(rowStr) - this.minRow;
+        act
+          .setImage(makeStaticSvg(slotMachine.getSymbolAt(gameCol, gameRow)))
+          .catch(console.error);
+      }
+    });
   }
 
   override async onWillAppear(ev: WillAppearEvent<JsonObject>): Promise<void> {
@@ -77,7 +89,8 @@ export class ReelAction extends SingletonAction<JsonObject> {
     this.idToCoords.set(ev.action.id, coords);
     this.rebuildOrigin();
 
-    const { gameCol, gameRow } = this.toGame(coords);
+    const gameCol = coords.column - this.minCol;
+    const gameRow = coords.row - this.minRow;
     await ev.action.setImage(makeStaticSvg(slotMachine.getSymbolAt(gameCol, gameRow)));
     await ev.action.setTitle("");
   }
@@ -95,25 +108,32 @@ export class ReelAction extends SingletonAction<JsonObject> {
   override async onKeyDown(ev: KeyDownEvent<JsonObject>): Promise<void> {
     const coords = this.idToCoords.get(ev.action.id);
     if (!coords) return;
-    const { gameCol, gameRow } = this.toGame(coords);
-    const rowLabels = ["TOP", "MID ★", "BOT"] as const;
-    await ev.action.setTitle(`C${gameCol + 1}\n${rowLabels[gameRow]}`);
+    const gameCol = coords.column - this.minCol;
+    const gameRow = coords.row - this.minRow;
+    const paylineRow = slotMachine.paylineRow;
+    const rowLabel =
+      gameRow === paylineRow
+        ? "PAY ★"
+        : gameRow < paylineRow
+          ? `↑ ${paylineRow - gameRow}`
+          : `↓ ${gameRow - paylineRow}`;
+    await ev.action.setTitle(`C${gameCol + 1}\n${rowLabel}`);
     setTimeout(() => ev.action.setTitle("").catch(console.error), 1200);
   }
 
   // ── Private helpers ──────────────────────────────────────────────────────
 
-  /** Recompute the top-left origin whenever the set of registered keys changes. */
+  /**
+   * Recompute the top-left origin and notify the slot machine of the new grid
+   * dimensions whenever the set of registered keys changes.
+   */
   private rebuildOrigin(): void {
     const all = [...this.idToCoords.values()];
+    if (all.length === 0) return;
     this.minCol = Math.min(...all.map((c) => c.column));
     this.minRow = Math.min(...all.map((c) => c.row));
-  }
-
-  private toGame(coords: DeckCoords): { gameCol: ColumnIndex; gameRow: RowIndex } {
-    return {
-      gameCol: ((coords.column - this.minCol) % 3) as ColumnIndex,
-      gameRow: ((coords.row - this.minRow) % 3) as RowIndex,
-    };
+    const maxCol = Math.max(...all.map((c) => c.column));
+    const maxRow = Math.max(...all.map((c) => c.row));
+    slotMachine.resize(maxCol - this.minCol + 1, maxRow - this.minRow + 1);
   }
 }
